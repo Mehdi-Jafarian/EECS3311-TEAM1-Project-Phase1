@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: eecs3311-platform:latest
+    container_name: service-booking-platform
+    # Keep stdin open and allocate a pseudo-TTY for interactive CLI
+    stdin_open: true
+    tty: true
