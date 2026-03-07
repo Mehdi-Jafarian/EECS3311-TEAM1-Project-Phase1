@@ -1,0 +1,78 @@
+@startuml use_case_diagram
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecaseBorderColor #336699
+skinparam usecaseBackgroundColor #EEF4FF
+skinparam arrowColor #336699
+
+title Service Booking & Consulting Platform — Use Case Diagram (Phase 1)
+
+left to right direction
+
+actor Client as C
+actor Consultant as CO
+actor Admin as A
+
+rectangle "Service Booking & Consulting Platform" {
+
+  ' ── Client Use Cases ──────────────────────────────
+  usecase "UC1: Browse Consulting Services"          as UC1
+  usecase "UC2: Request a Booking"                  as UC2
+  usecase "UC3: Cancel a Booking"                   as UC3
+  usecase "UC4: View Booking History"               as UC4
+  usecase "UC5: Process Payment"                    as UC5
+  usecase "UC6: Manage Payment Methods"             as UC6
+  usecase "UC7: View Payment History"               as UC7
+
+  usecase "Validate Slot Availability"              as VAL_SLOT
+  usecase "Apply Cancellation Policy"               as CAN_POL
+  usecase "Validate Payment Details"                as VAL_PAY
+  usecase "Simulate Processing Delay"               as SIM_DELAY
+  usecase "Generate Transaction ID"                 as GEN_TXN
+  usecase "Send Payment Confirmation Notification"  as NOTIF_PAY
+
+  ' ── Consultant Use Cases ──────────────────────────
+  usecase "UC8: Manage Availability"                as UC8
+  usecase "UC9: Accept / Reject Booking Request"   as UC9
+  usecase "UC10: Complete a Booking"               as UC10
+
+  usecase "Notify Client of Decision"              as NOTIF_DEC
+  usecase "Notify Client Booking Completed"        as NOTIF_COMP
+
+  ' ── Admin Use Cases ───────────────────────────────
+  usecase "UC11: Approve Consultant Registration"  as UC11
+  usecase "UC12: Define System Policies"           as UC12
+
+  usecase "Notify Consultant of Approval"          as NOTIF_APPR
+
+  ' ── Include / Extend relationships ───────────────
+  UC2 ..> VAL_SLOT    : <<include>>
+  UC3 ..> CAN_POL     : <<include>>
+  UC5 ..> VAL_PAY     : <<include>>
+  UC5 ..> SIM_DELAY   : <<include>>
+  UC5 ..> GEN_TXN     : <<include>>
+  UC5 ..> NOTIF_PAY   : <<include>>
+  UC9 ..> NOTIF_DEC   : <<include>>
+  UC10 ..> NOTIF_COMP : <<include>>
+  UC11 ..> NOTIF_APPR : <<include>>
+
+  UC2 ..> UC6 : <<extend>>\n(use saved method)
+}
+
+' ── Actor associations ────────────────────────────
+C  --> UC1
+C  --> UC2
+C  --> UC3
+C  --> UC4
+C  --> UC5
+C  --> UC6
+C  --> UC7
+
+CO --> UC8
+CO --> UC9
+CO --> UC10
+
+A  --> UC11
+A  --> UC12
+
+@enduml

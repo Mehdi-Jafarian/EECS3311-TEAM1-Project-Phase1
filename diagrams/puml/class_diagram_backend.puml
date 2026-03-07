@@ -1,0 +1,574 @@
+@startuml class_diagram_backend
+skinparam classBackgroundColor #EEF4FF
+skinparam classBorderColor #336699
+skinparam arrowColor #336699
+skinparam stereotypeCBackgroundColor #FFFFAA
+skinparam classAttributeIconSize 0
+
+title Service Booking & Consulting Platform — Class Diagram (Backend Focus, Phase 1)
+
+' ═══════════════════════════════════════════════
+' DOMAIN — Enums
+' ═══════════════════════════════════════════════
+package "com.platform.domain" {
+
+  enum BookingStatus {
+    REQUESTED
+    CONFIRMED
+    PENDING_PAYMENT
+    PAID
+    REJECTED
+    CANCELLED
+    COMPLETED
+  }
+
+  enum PaymentType {
+    CREDIT_CARD
+    DEBIT_CARD
+    PAYPAL
+    BANK_TRANSFER
+  }
+
+  enum ConsultantStatus {
+    PENDING
+    APPROVED
+    REJECTED
+  }
+
+  ' ── Core Entities ──────────────────────────────
+  class Client {
+    - id : String
+    - name : String
+    - email : String
+    - passwordHash : String
+    + getId() : String
+    + getName() : String
+    + getEmail() : String
+  }
+
+  class Consultant {
+    - id : String
+    - name : String
+    - email : String
+    - status : ConsultantStatus
+    + getId() : String
+    + getStatus() : ConsultantStatus
+    + approve() : void
+    + reject() : void
+  }
+
+  class ConsultingService {
+    - id : String
+    - name : String
+    - type : String
+    - durationMinutes : int
+    - basePrice : double
+    + getId() : String
+    + getBasePrice() : double
+  }
+
+  class TimeSlot {
+    - id : String
+    - consultantId : String
+    - date : LocalDate
+    - startTime : LocalTime
+    - endTime : LocalTime
+    - available : boolean
+    + isAvailable() : boolean
+    + book() : void
+    + release() : void
+  }
+
+  class Booking {
+    - id : String
+    - clientId : String
+    - consultantId : String
+    - serviceId : String
+    - timeSlotId : String
+    - status : BookingStatus
+    - createdAt : LocalDateTime
+    - stateHandler : BookingStateHandler
+    + getStatus() : BookingStatus
+    + confirm() : void
+    + accept() : void
+    + reject() : void
+    + pay() : void
+    + complete() : void
+    + cancel() : void
+    + setStateHandler(h: BookingStateHandler) : void
+  }
+
+  class Payment {
+    - id : String
+    - bookingId : String
+    - clientId : String
+    - amount : double
+    - paymentType : PaymentType
+    - transactionId : String
+    - paidAt : LocalDateTime
+    - status : String
+    + getId() : String
+    + getTransactionId() : String
+  }
+
+  class Notification {
+    - id : String
+    - recipientId : String
+    - message : String
+    - timestamp : LocalDateTime
+    + getId() : String
+    + getMessage() : String
+  }
+
+  abstract class PaymentMethod {
+    - id : String
+    - clientId : String
+    - paymentType : PaymentType
+    + validate() : void
+    + getPaymentType() : PaymentType
+    + getId() : String
+  }
+
+  class CreditCardPaymentMethod {
+    - cardNumber : String
+    - expiryMonth : int
+    - expiryYear : int
+    - cvv : String
+    + validate() : void
+  }
+
+  class DebitCardPaymentMethod {
+    - cardNumber : String
+    - expiryMonth : int
+    - expiryYear : int
+    - cvv : String
+    + validate() : void
+  }
+
+  class PayPalPaymentMethod {
+    - email : String
+    + validate() : void
+  }
+
+  class BankTransferPaymentMethod {
+    - accountNumber : String
+    - routingNumber : String
+    + validate() : void
+  }
+
+  ' ── Relationships ──
+  Booking --> BookingStatus
+  Booking --> "1" BookingStateHandler : uses (State Pattern)
+  Payment --> PaymentType
+  PaymentMethod <|-- CreditCardPaymentMethod
+  PaymentMethod <|-- DebitCardPaymentMethod
+  PaymentMethod <|-- PayPalPaymentMethod
+  PaymentMethod <|-- BankTransferPaymentMethod
+  PaymentMethod --> PaymentType
+  Consultant --> ConsultantStatus
+  Booking "0..*" --> "1" Client : booked by
+  Booking "0..*" --> "1" Consultant : assigned to
+  Booking "0..*" --> "1" ConsultingService : for
+  Booking "0..*" --> "1" TimeSlot : occupies
+}
+
+' ═══════════════════════════════════════════════
+' STATE PATTERN
+' ═══════════════════════════════════════════════
+package "com.platform.domain.state <<State Pattern>>" {
+
+  interface BookingStateHandler <<State>> {
+    + confirm(b: Booking) : void
+    + accept(b: Booking) : void
+    + reject(b: Booking) : void
+    + pay(b: Booking) : void
+    + complete(b: Booking) : void
+    + cancel(b: Booking) : void
+    + getStatus() : BookingStatus
+  }
+
+  class RequestedState <<ConcreteState>> {
+    + accept(b: Booking) : void
+    + reject(b: Booking) : void
+    + cancel(b: Booking) : void
+    + getStatus() : BookingStatus
+  }
+
+  class PendingPaymentState <<ConcreteState>> {
+    + pay(b: Booking) : void
+    + cancel(b: Booking) : void
+    + getStatus() : BookingStatus
+  }
+
+  class PaidState <<ConcreteState>> {
+    + complete(b: Booking) : void
+    + getStatus() : BookingStatus
+  }
+
+  class RejectedState <<ConcreteState>> {
+    + getStatus() : BookingStatus
+  }
+
+  class CancelledState <<ConcreteState>> {
+    + getStatus() : BookingStatus
+  }
+
+  class CompletedState <<ConcreteState>> {
+    + getStatus() : BookingStatus
+  }
+
+  BookingStateHandler <|.. RequestedState
+  BookingStateHandler <|.. PendingPaymentState
+  BookingStateHandler <|.. PaidState
+  BookingStateHandler <|.. RejectedState
+  BookingStateHandler <|.. CancelledState
+  BookingStateHandler <|.. CompletedState
+}
+
+' ═══════════════════════════════════════════════
+' STRATEGY PATTERN — Cancellation / Pricing
+' ═══════════════════════════════════════════════
+package "com.platform.domain.policy <<Strategy Pattern>>" {
+
+  interface CancellationPolicy <<Strategy>> {
+    + apply(booking: Booking, amount: double) : double
+    + getName() : String
+  }
+
+  class FreeCancellationPolicy <<ConcreteStrategy>> {
+    + apply(booking: Booking, amount: double) : double
+  }
+
+  class PartialRefundPolicy <<ConcreteStrategy>> {
+    - refundPercent : double
+    + apply(booking: Booking, amount: double) : double
+  }
+
+  class NoCancellationRefundPolicy <<ConcreteStrategy>> {
+    + apply(booking: Booking, amount: double) : double
+  }
+
+  interface PricingStrategy <<Strategy>> {
+    + calculatePrice(service: ConsultingService) : double
+  }
+
+  class BasePricingStrategy <<ConcreteStrategy>> {
+    + calculatePrice(service: ConsultingService) : double
+  }
+
+  class DiscountedPricingStrategy <<ConcreteStrategy>> {
+    - discountPercent : double
+    + calculatePrice(service: ConsultingService) : double
+  }
+
+  class SystemPolicy {
+    - cancellationPolicy : CancellationPolicy
+    - pricingStrategy : PricingStrategy
+    - notificationsEnabled : boolean
+    + getCancellationPolicy() : CancellationPolicy
+    + setCancellationPolicy(p: CancellationPolicy) : void
+    + getPricingStrategy() : PricingStrategy
+    + setPricingStrategy(p: PricingStrategy) : void
+    + isNotificationsEnabled() : boolean
+    + setNotificationsEnabled(b: boolean) : void
+  }
+
+  CancellationPolicy <|.. FreeCancellationPolicy
+  CancellationPolicy <|.. PartialRefundPolicy
+  CancellationPolicy <|.. NoCancellationRefundPolicy
+  PricingStrategy <|.. BasePricingStrategy
+  PricingStrategy <|.. DiscountedPricingStrategy
+  SystemPolicy --> CancellationPolicy
+  SystemPolicy --> PricingStrategy
+}
+
+' ═══════════════════════════════════════════════
+' OBSERVER PATTERN — Notifications
+' ═══════════════════════════════════════════════
+package "com.platform.application <<Observer Pattern>>" {
+
+  interface BookingEventObserver <<Observer>> {
+    + onBookingEvent(event: BookingEvent) : void
+  }
+
+  class BookingEvent {
+    - booking : Booking
+    - eventType : String
+    - message : String
+    + getBooking() : Booking
+    + getMessage() : String
+  }
+
+  class NotificationObserver <<ConcreteObserver>> {
+    - notificationService : NotificationService
+    + onBookingEvent(event: BookingEvent) : void
+  }
+
+  BookingEventObserver <|.. NotificationObserver
+  NotificationObserver --> NotificationService
+}
+
+' ═══════════════════════════════════════════════
+' FACTORY METHOD PATTERN — Payment Processors
+' ═══════════════════════════════════════════════
+package "com.platform.application.payment <<Factory Method Pattern>>" {
+
+  abstract class PaymentProcessor <<Creator>> {
+    # delayMs : long
+    + process(method: PaymentMethod, amount: double, bookingId: String) : Payment
+    # validate(method: PaymentMethod) : void
+    # simulateDelay() : void
+    # generateTransactionId() : String
+  }
+
+  class CreditCardProcessor <<ConcreteCreator>> {
+    # validate(method: PaymentMethod) : void
+  }
+
+  class DebitCardProcessor <<ConcreteCreator>> {
+    # validate(method: PaymentMethod) : void
+  }
+
+  class PayPalProcessor <<ConcreteCreator>> {
+    # validate(method: PaymentMethod) : void
+  }
+
+  class BankTransferProcessor <<ConcreteCreator>> {
+    # validate(method: PaymentMethod) : void
+  }
+
+  class PaymentProcessorFactory <<Factory>> {
+    + create(type: PaymentType) : PaymentProcessor
+  }
+
+  PaymentProcessor <|-- CreditCardProcessor
+  PaymentProcessor <|-- DebitCardProcessor
+  PaymentProcessor <|-- PayPalProcessor
+  PaymentProcessor <|-- BankTransferProcessor
+  PaymentProcessorFactory ..> PaymentProcessor : creates
+}
+
+' ═══════════════════════════════════════════════
+' APPLICATION SERVICES
+' ═══════════════════════════════════════════════
+package "com.platform.application (services)" {
+
+  class BookingService {
+    - bookingRepo : BookingRepository
+    - timeSlotRepo : TimeSlotRepository
+    - serviceRepo : ServiceRepository
+    - consultantRepo : ConsultantRepository
+    - systemPolicy : SystemPolicy
+    - observers : List<BookingEventObserver>
+    + requestBooking(clientId, consultantId, serviceId, slotId) : Booking
+    + cancelBooking(bookingId, clientId) : void
+    + acceptBooking(bookingId, consultantId) : void
+    + rejectBooking(bookingId, consultantId) : void
+    + completeBooking(bookingId, consultantId) : void
+    + getBookingsForClient(clientId) : List<Booking>
+    + addObserver(obs: BookingEventObserver) : void
+  }
+
+  class PaymentService {
+    - paymentRepo : PaymentRepository
+    - paymentMethodRepo : PaymentMethodRepository
+    - bookingRepo : BookingRepository
+    - processorFactory : PaymentProcessorFactory
+    - observers : List<BookingEventObserver>
+    + processPayment(bookingId, paymentMethodId) : Payment
+    + addPaymentMethod(method: PaymentMethod) : void
+    + getPaymentMethods(clientId) : List<PaymentMethod>
+    + removePaymentMethod(id, clientId) : void
+    + getPaymentHistory(clientId) : List<Payment>
+    + addObserver(obs: BookingEventObserver) : void
+  }
+
+  class ConsultantService {
+    - consultantRepo : ConsultantRepository
+    - timeSlotRepo : TimeSlotRepository
+    + registerConsultant(name, email) : Consultant
+    + addTimeSlot(consultantId, slot: TimeSlot) : void
+    + getTimeSlots(consultantId) : List<TimeSlot>
+    + updateTimeSlot(slot: TimeSlot) : void
+  }
+
+  class ClientService {
+    - clientRepo : ClientRepository
+    + registerClient(name, email) : Client
+    + getClient(id) : Client
+    + getAllClients() : List<Client>
+  }
+
+  class AdminService {
+    - consultantRepo : ConsultantRepository
+    - systemPolicy : SystemPolicy
+    + approveConsultant(consultantId) : void
+    + rejectConsultant(consultantId) : void
+    + setCancellationPolicy(policy: CancellationPolicy) : void
+    + setPricingStrategy(strategy: PricingStrategy) : void
+    + setNotificationsEnabled(enabled: boolean) : void
+    + getSystemPolicy() : SystemPolicy
+  }
+
+  class NotificationService {
+    - notificationRepo : NotificationRepository
+    + send(recipientId, message) : Notification
+    + getNotifications(recipientId) : List<Notification>
+  }
+
+  class ServiceCatalogService {
+    - serviceRepo : ServiceRepository
+    - systemPolicy : SystemPolicy
+    + listServices() : List<ConsultingService>
+    + addService(service: ConsultingService) : void
+    + getPriceFor(service: ConsultingService) : double
+  }
+
+  BookingService --> BookingEventObserver
+  BookingService --> SystemPolicy
+  PaymentService --> BookingEventObserver
+  PaymentService --> PaymentProcessorFactory
+  AdminService --> SystemPolicy
+  ServiceCatalogService --> SystemPolicy
+}
+
+' ═══════════════════════════════════════════════
+' REPOSITORY INTERFACES + IN-MEMORY IMPLS
+' ═══════════════════════════════════════════════
+package "com.platform.infrastructure.repository" {
+
+  interface BookingRepository {
+    + save(b: Booking) : void
+    + findById(id) : Optional<Booking>
+    + findByClientId(clientId) : List<Booking>
+    + findByConsultantId(consultantId) : List<Booking>
+  }
+
+  interface TimeSlotRepository {
+    + save(ts: TimeSlot) : void
+    + findById(id) : Optional<TimeSlot>
+    + findByConsultantId(consultantId) : List<TimeSlot>
+  }
+
+  interface ServiceRepository {
+    + save(s: ConsultingService) : void
+    + findById(id) : Optional<ConsultingService>
+    + findAll() : List<ConsultingService>
+  }
+
+  interface ConsultantRepository {
+    + save(c: Consultant) : void
+    + findById(id) : Optional<Consultant>
+    + findAll() : List<Consultant>
+  }
+
+  interface ClientRepository {
+    + save(c: Client) : void
+    + findById(id) : Optional<Client>
+    + findAll() : List<Client>
+  }
+
+  interface PaymentRepository {
+    + save(p: Payment) : void
+    + findById(id) : Optional<Payment>
+    + findByClientId(clientId) : List<Payment>
+    + findByBookingId(bookingId) : Optional<Payment>
+  }
+
+  interface PaymentMethodRepository {
+    + save(pm: PaymentMethod) : void
+    + findById(id) : Optional<PaymentMethod>
+    + findByClientId(clientId) : List<PaymentMethod>
+    + delete(id) : void
+  }
+
+  interface NotificationRepository {
+    + save(n: Notification) : void
+    + findByRecipientId(recipientId) : List<Notification>
+  }
+
+  class InMemoryBookingRepository
+  class InMemoryTimeSlotRepository
+  class InMemoryServiceRepository
+  class InMemoryConsultantRepository
+  class InMemoryClientRepository
+  class InMemoryPaymentRepository
+  class InMemoryPaymentMethodRepository
+  class InMemoryNotificationRepository
+
+  BookingRepository <|.. InMemoryBookingRepository
+  TimeSlotRepository <|.. InMemoryTimeSlotRepository
+  ServiceRepository <|.. InMemoryServiceRepository
+  ConsultantRepository <|.. InMemoryConsultantRepository
+  ClientRepository <|.. InMemoryClientRepository
+  PaymentRepository <|.. InMemoryPaymentRepository
+  PaymentMethodRepository <|.. InMemoryPaymentMethodRepository
+  NotificationRepository <|.. InMemoryNotificationRepository
+}
+
+' ═══════════════════════════════════════════════
+' INFRASTRUCTURE — Time Provider
+' ═══════════════════════════════════════════════
+package "com.platform.infrastructure" {
+
+  interface TimeProvider {
+    + now() : LocalDateTime
+    + today() : LocalDate
+  }
+
+  class SystemTimeProvider {
+    + now() : LocalDateTime
+    + today() : LocalDate
+  }
+
+  class FixedTimeProvider {
+    - fixedTime : LocalDateTime
+    + now() : LocalDateTime
+    + today() : LocalDate
+  }
+
+  TimeProvider <|.. SystemTimeProvider
+  TimeProvider <|.. FixedTimeProvider
+}
+
+' ═══════════════════════════════════════════════
+' PRESENTATION — CLI
+' ═══════════════════════════════════════════════
+package "com.platform.presentation" {
+
+  class Application {
+    + main(args: String[]) : void
+  }
+
+  class MainMenu {
+    - scanner : Scanner
+    + show() : void
+  }
+
+  class ClientMenu {
+    - bookingService : BookingService
+    - paymentService : PaymentService
+    - catalogService : ServiceCatalogService
+    - clientService : ClientService
+    + show(clientId: String) : void
+  }
+
+  class ConsultantMenu {
+    - bookingService : BookingService
+    - consultantService : ConsultantService
+    + show(consultantId: String) : void
+  }
+
+  class AdminMenu {
+    - adminService : AdminService
+    - consultantService : ConsultantService
+    + show() : void
+  }
+
+  Application --> MainMenu
+  MainMenu --> ClientMenu
+  MainMenu --> ConsultantMenu
+  MainMenu --> AdminMenu
+}
+
+@enduml
