@@ -1,5 +1,6 @@
 package com.platform.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.platform.domain.state.BookingStateHandler;
 import com.platform.domain.state.RequestedState;
 
@@ -23,6 +24,7 @@ public class Booking {
     private final LocalDateTime createdAt;
 
     /** Current state handler — replaced on every valid transition. */
+    @JsonIgnore
     private BookingStateHandler stateHandler;
 
     public Booking(String id, String clientId, String consultantId,
