@@ -44,7 +44,7 @@ docker compose up --build
 |---------|-----|-------------|
 | Frontend | http://localhost:3000 | Web UI (client, consultant, admin views) |
 | Backend API | http://localhost:8080 | REST API endpoints |
-| Database | localhost:5432 | PostgreSQL (internal, not exposed by default) |
+| Database | localhost:5433 | PostgreSQL (internal, not exposed by default) |
 
 ### Using the Application
 
@@ -72,8 +72,8 @@ Create a `.env` file from `.env.example`:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DB_PASSWORD` | Yes | PostgreSQL password |
-| `AI_API_KEY` | No* | OpenAI API key for the AI chatbot |
-| `AI_PROVIDER` | No | LLM provider (default: `openai`) |
+| `AI_API_KEY` | No* | Google Gemini API key for the AI chatbot |
+| `AI_PROVIDER` | No | LLM provider (default: `gemini`) |
 
 \* The application runs without an API key; the chatbot will return a fallback message.
 
