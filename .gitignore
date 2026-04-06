@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # env files
 .env
 
@@ -7,6 +8,8 @@ dist/
 build/
 coverage/
 
+=======
+>>>>>>> c15281b818471a2e41649d26f9f6e14939d0cf42
 # Compiled class file
 *.class
 
@@ -41,5 +44,9 @@ __MACOSX/
 *.iml
 .vscode/
 
+<<<<<<< HEAD
+=======
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+>>>>>>> c15281b818471a2e41649d26f9f6e14939d0cf42
 hs_err_pid*
 replay_pid*

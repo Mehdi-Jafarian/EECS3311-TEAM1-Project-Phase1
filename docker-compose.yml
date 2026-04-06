@@ -11,7 +11,11 @@ services:
       - db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
+<<<<<<< HEAD
       - "5433:5432"
+=======
+      - "5432:5432"
+>>>>>>> c15281b818471a2e41649d26f9f6e14939d0cf42
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U platform_user -d booking_platform"]
       interval: 5s
