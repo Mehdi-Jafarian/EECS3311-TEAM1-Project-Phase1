@@ -9,7 +9,7 @@ The chatbot is **informational only** — it does not perform actions, access pr
 ## 2. Architecture
 
 ```
-Frontend (Chat Widget) → Backend (POST /api/chat) → OpenAI API → Backend → Frontend
+Frontend (Chat Widget) → Backend (POST /api/chat) → Gemini API → Backend → Frontend
 ```
 
 ### Data Flow
@@ -17,7 +17,7 @@ Frontend (Chat Widget) → Backend (POST /api/chat) → OpenAI API → Backend �
 1. The client types a question in the chat widget (floating button, bottom-right corner)
 2. The frontend sends a `POST /api/chat` request to the backend with the user's message and conversation history
 3. The backend's `ChatbotService` constructs a system prompt with public platform information
-4. The backend calls the OpenAI API (`gpt-3.5-turbo`) via `java.net.http.HttpClient`
+4. The backend calls the Gemini API (`gemini-2.5-flash`) via `java.net.http.HttpClient`
 5. The backend returns the AI's response to the frontend
 6. The frontend displays the response in the chat panel
 
@@ -25,7 +25,7 @@ Frontend (Chat Widget) → Backend (POST /api/chat) → OpenAI API → Backend �
 
 | Class | Location | Responsibility |
 |-------|----------|---------------|
-| `ChatbotService` | `com.platform.application` | Builds system prompt, calls OpenAI API, returns response |
+| `ChatbotService` | `com.platform.application` | Builds system prompt, calls Gemini API, returns response |
 | `ChatController` | `com.platform.presentation.api` | REST endpoint `POST /api/chat` |
 | `ChatWidget` | `frontend/src/components/ChatWidget.jsx` | React chat UI component |
 
@@ -40,15 +40,15 @@ Frontend (Chat Widget) → Backend (POST /api/chat) → OpenAI API → Backend �
 Set the following environment variables:
 
 ```env
-AI_API_KEY=sk-your-openai-api-key-here
-AI_PROVIDER=openai
+AI_API_KEY=your_gemini_api_key_here
+AI_PROVIDER=gemini
 ```
 
 In Docker Compose, these are read from the `.env` file. Create a `.env` file from `.env.example`:
 
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenAI API key
+# Edit .env and add your Gemini API key
 ```
 
 If `AI_API_KEY` is not set or empty, the chatbot returns:
@@ -155,33 +155,35 @@ POST /api/chat
 }
 ```
 
-### OpenAI API Call
+### Gemini API Call
 
-```json
-POST https://api.openai.com/v1/chat/completions
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={AI_API_KEY}
 Headers:
-  Authorization: Bearer {AI_API_KEY}
   Content-Type: application/json
 
 Body:
 {
-  "model": "gpt-3.5-turbo",
-  "messages": [
-    { "role": "system", "content": "<system prompt>" },
-    ...conversation history...,
-    { "role": "user", "content": "<user message>" }
+  "systemInstruction": {
+    "parts": [{ "text": "<system prompt>" }]
+  },
+  "contents": [
+    { "role": "user", "parts": [{ "text": "previous question" }] },
+    { "role": "model", "parts": [{ "text": "previous answer" }] },
+    { "role": "user", "parts": [{ "text": "<user message>" }] }
   ],
-  "max_tokens": 500,
-  "temperature": 0.7
+  "generationConfig": {
+    "maxOutputTokens": 500,
+    "temperature": 0.7
+  }
 }
-```
+
 
 ## 8. Error Handling
 
 | Scenario | Behavior |
 |----------|----------|
 | `AI_API_KEY` not set or empty | Returns: "AI assistant is not configured. Please set the AI_API_KEY environment variable." |
-| OpenAI API returns non-200 status | Logs error, returns: "I'm sorry, I'm currently unable to assist. Please try again later." |
+| Gemini API returns non-200 status | Logs error, returns: "I'm sorry, I'm currently unable to assist. Please try again later." |
 | Network timeout (30s limit) | Catches exception, returns fallback message |
 | Any unexpected exception | Catches exception, returns fallback message |
-| OpenAI API unreachable | Catches exception, returns fallback message |
+| Gemini API unreachable | Catches exception, returns fallback message |
