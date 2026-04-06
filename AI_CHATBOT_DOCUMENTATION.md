@@ -31,9 +31,9 @@ Frontend (Chat Widget) → Backend (POST /api/chat) → OpenAI API → Backend �
 
 ## 3. LLM Provider Configuration
 
-**Provider:** OpenAI  
-**Model:** `gpt-3.5-turbo`  
-**Endpoint:** `https://api.openai.com/v1/chat/completions`
+**Provider:** Google Gemini
+**Model:** `gemini-2.5-flash`
+**Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
 
 ### Configuration
 
