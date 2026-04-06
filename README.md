@@ -1,221 +1,187 @@
-# EECS3311 — Phase 1: Service Booking & Consulting Platform
+# Service Booking & Consulting Platform
 
-**Course:** EECS 3311 – Software Design  
-**Team:** Mehdi Jafarian, Naeesha Puri, Spence Hashemi  
-**GitHub:** https://github.com/Mehdi-Jafarian/EECS3311-TEAM1-Project-Phase1
+**EECS 3311 — Team 1 Project (Phase 2)**
 
-Java 17 (Maven) implementation including PlantUML diagrams, CLI frontend, JUnit 5 tests, and Docker support. No frameworks, no database — all persistence is in-memory.
+**Repository:** https://github.com/Mehdi-Jafarian/EECS3311-TEAM1-Project-Phase1
 
 ---
+
+## Overview
+
+A full-stack service booking platform that connects clients with professional consultants. Clients browse services, book sessions, process payments, and interact with an AI customer assistant. Consultants manage availability and booking requests. Admins control system policies and consultant approvals.
+
+## Architecture
+
+- **Backend:** Spring Boot 3.2 (Java 17) — REST API with existing GoF design patterns (State, Strategy, Observer, Template Method, Factory Method)
+- **Frontend:** React (Vite) — Single-page application with role-based views
+- **Database:** PostgreSQL 16 — persistent storage
+- **AI Chatbot:** OpenAI GPT-3.5-turbo — informational assistant for clients
+
+## Quick Start
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+
+### Running the System
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Mehdi-Jafarian/EECS3311-TEAM1-Project-Phase1.git
+cd EECS3311-TEAM1-Project-Phase1
+
+# 2. Create environment file
+cp .env.example .env
+# Edit .env and set your values (DB_PASSWORD, AI_API_KEY)
+
+# 3. Start everything
+docker compose up --build
+```
+
+### Accessing the Application
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Frontend | http://localhost:3000 | Web UI (client, consultant, admin views) |
+| Backend API | http://localhost:8080 | REST API endpoints |
+| Database | localhost:5432 | PostgreSQL (internal, not exposed by default) |
+
+### Using the Application
+
+1. Open http://localhost:3000 in your browser
+2. Select a role:
+   - **Client** — Browse services, book sessions, process payments, chat with AI assistant
+   - **Consultant** — Manage availability, accept/reject bookings, complete sessions
+   - **Admin** — Approve consultants, configure system policies
+
+### AI Customer Assistant
+
+The AI chatbot is accessible from the **Client** interface:
+1. Log in as a Client
+2. Click the chat bubble icon (bottom-right corner)
+3. Ask questions about services, booking process, payment methods, etc.
+
+Requires `AI_API_KEY` to be set in `.env`. Without it, the chatbot returns a configuration message.
+
+See [AI_CHATBOT_DOCUMENTATION.md](AI_CHATBOT_DOCUMENTATION.md) for full details.
+
+## Environment Variables
+
+Create a `.env` file from `.env.example`:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DB_PASSWORD` | Yes | PostgreSQL password |
+| `AI_API_KEY` | No* | OpenAI API key for the AI chatbot |
+| `AI_PROVIDER` | No | LLM provider (default: `openai`) |
+
+\* The application runs without an API key; the chatbot will return a fallback message.
+
+## Port Mappings
+
+| Port | Service |
+|------|---------|
+| 3000 | Frontend (Nginx serving React SPA, proxies `/api/*` to backend) |
+| 8080 | Backend (Spring Boot REST API) |
+| 5432 | PostgreSQL (mapped for debugging; not needed externally) |
+
+## API Endpoints
+
+### Service Catalog
+- `GET /api/services` — List all consulting services
+- `GET /api/services/{id}/price` — Get effective price
+
+### Clients
+- `POST /api/clients` — Register a new client
+- `GET /api/clients` — List all clients
+- `GET /api/clients/{id}` — Get client details
+
+### Consultants
+- `POST /api/consultants` — Register a new consultant
+- `GET /api/consultants` — List all consultants
+- `GET /api/consultants/{id}` — Get consultant details
+- `POST /api/consultants/{id}/timeslots` — Add a time slot
+- `GET /api/consultants/{id}/timeslots` — Get time slots
+
+### Bookings
+- `POST /api/bookings` — Request a new booking
+- `GET /api/bookings/client/{clientId}` — Get client's bookings
+- `GET /api/bookings/consultant/{consultantId}` — Get consultant's bookings
+- `PUT /api/bookings/{id}/accept?consultantId=...` — Accept booking
+- `PUT /api/bookings/{id}/reject?consultantId=...` — Reject booking
+- `PUT /api/bookings/{id}/complete?consultantId=...` — Complete booking
+- `PUT /api/bookings/{id}/cancel?clientId=...` — Cancel booking
+
+### Payments
+- `POST /api/payments` — Process payment
+- `GET /api/payments/client/{clientId}` — Payment history
+- `POST /api/payment-methods` — Add payment method
+- `GET /api/payment-methods/client/{clientId}` — List payment methods
+- `DELETE /api/payment-methods/{id}?clientId=...` — Remove payment method
+
+### Admin
+- `GET /api/admin/consultants/pending` — List pending consultants
+- `PUT /api/admin/consultants/{id}/approve` — Approve consultant
+- `PUT /api/admin/consultants/{id}/reject` — Reject consultant
+- `GET /api/admin/policy` — Get system policies
+- `PUT /api/admin/policy/cancellation` — Set cancellation policy
+- `PUT /api/admin/policy/pricing` — Set pricing strategy
+- `PUT /api/admin/policy/notifications` — Toggle notifications
+
+### Notifications
+- `GET /api/notifications/{recipientId}` — Get notifications
+
+### AI Chatbot
+- `POST /api/chat` — Send message to AI assistant
 
 ## Project Structure
 
 ```
-diagrams/
-  puml/              — PlantUML source files
-  pdf/               — Exported PDFs
-backend/             — Maven project (Java 17) + JUnit 5 tests
-Dockerfile
-docker-compose.yml
-README.md
+├── backend/
+│   ├── src/main/java/com/platform/
+│   │   ├── domain/           (Phase 1 — unchanged)
+│   │   ├── application/      (Phase 1 + ChatbotService)
+│   │   ├── infrastructure/   (Phase 1 + JDBC repositories)
+│   │   ├── presentation/
+│   │   │   ├── api/          (Phase 2 — REST controllers)
+│   │   │   └── *.java        (Phase 1 CLI — kept for reference)
+│   │   └── config/           (Phase 2 — Spring configuration)
+│   ├── pom.xml
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── pages/            (client, consultant, admin views)
+│   │   ├── components/       (ChatWidget)
+│   │   └── api.js            (Axios API client)
+│   ├── Dockerfile
+│   └── nginx.conf
+├── db/
+│   └── init.sql              (database schema + seed data)
+├── docker-compose.yml
+├── .env.example
+├── AI_CHATBOT_DOCUMENTATION.md
+└── README.md
 ```
 
----
+## Phase 2 Changes from Phase 1
 
-## Architecture
+### Added (no existing code modified)
+- Spring Boot web framework (`pom.xml` updated)
+- `PlatformApplication.java` — Spring Boot entry point
+- `config/` package — `AppConfig`, `CorsConfig`, `DataSourceConfig`
+- `presentation/api/` package — 8 REST controllers + global exception handler
+- `ChatbotService` — AI chatbot service in application layer
+- `infrastructure/repository/jdbc/` — 8 JDBC repository implementations
+- React frontend with all client, consultant, and admin views
+- Docker Compose configuration (3 containers)
+- Database initialization script
 
-Clean 4-layer structure:
+### Not Modified
+- All domain classes (`domain/` package)
+- All application service classes
+- All design pattern implementations (State, Strategy, Observer, Template Method, Factory Method)
+- All existing InMemory repository classes (kept for test use)
+- Phase 1 CLI classes (kept for reference)
 
-```
-com.platform
-├── domain/          — Entities, enums, exceptions
-│   ├── state/       — State pattern: booking lifecycle
-│   ├── policy/      — Strategy pattern: cancellation & pricing
-│   └── exception/   — Custom unchecked domain exceptions
-├── application/     — Use-case services
-│   └── payment/     — Template Method + Factory Method: payment processors
-├── infrastructure/  — In-memory repositories, TimeProvider
-└── presentation/    — CLI menus (thin, delegates to services)
-```
-
-| Layer | Key Classes |
-|---|---|
-| Domain | `Booking`, `Client`, `Consultant`, `ConsultingService`, `TimeSlot`, `Payment`, `Notification`, `PaymentMethod` |
-| Application | `BookingService`, `PaymentService`, `AdminService`, `ConsultantService`, `ClientService`, `ServiceCatalogService`, `NotificationService` |
-| Infrastructure | `InMemory*Repository` classes, `SystemTimeProvider`, `FixedTimeProvider` |
-| Presentation | `Application`, `MainMenu`, `ClientMenu`, `ConsultantMenu`, `AdminMenu` |
-
----
-
-## Use Cases (UC1–UC12)
-
-**Client:** UC1 Browse services · UC2 Request booking · UC3 Cancel booking · UC4 View booking history · UC5 Process payment · UC6 Manage payment methods · UC7 View payment history
-
-**Consultant:** UC8 Manage availability · UC9 Accept/reject bookings · UC10 Complete booking (only if Paid)
-
-**Admin:** UC11 Approve/reject consultant registration · UC12 Configure cancellation policy, pricing strategy, notifications
-
----
-
-## Booking Lifecycle
-
-States: `REQUESTED` → `PENDING_PAYMENT` → `PAID` → `COMPLETED`, with branches to `REJECTED` and `CANCELLED`.
-
-- Consultant accepting a booking → **PENDING_PAYMENT**
-- Successful payment → **PAID**
-- Completing a booking is only permitted from **PAID**
-
----
-
-## Payment Processing
-
-**Supported methods:** Credit Card, Debit Card, PayPal, Bank Transfer
-
-**Validation rules:**
-
-| Method | Rules |
-|---|---|
-| Credit / Debit Card | 16-digit number, future expiry date, 3–4 digit CVV |
-| PayPal | Valid email format |
-| Bank Transfer | Account number: 8–17 digits. Routing number: exactly 9 digits |
-
-**Payment flow:**
-1. Client selects a booking awaiting payment
-2. Selects or adds a payment method
-3. Details validated
-4. Payment simulated (2.5s delay)
-5. Unique transaction ID generated (`TXN-<UUID>`)
-6. Payment recorded; booking set to **PAID**
-7. Confirmation notification generated
-
----
-
-## GoF Design Patterns
-
-### 1. State — Booking Lifecycle
-**Problem:** 7 states with strict transition rules — without State, services would need sprawling `if/switch` blocks and invalid transitions would be easy to miss.  
-**Solution:** Each state is a `BookingStateHandler` implementation. `Booking` delegates all transitions to its current handler; invalid calls throw `InvalidBookingStateException` automatically.  
-**Participants:** `BookingStateHandler`, `RequestedState`, `PendingPaymentState`, `PaidState`, `RejectedState`, `CancelledState`, `CompletedState`, `Booking`
-
-### 2. Strategy — Cancellation & Pricing
-**Problem:** Admin must swap cancellation rules and pricing at runtime without touching service code.  
-**Solution:** `CancellationPolicy` and `PricingStrategy` are interfaces held by `SystemPolicy`. Admin swaps them via `AdminService`.  
-**Cancellation:** `FreeCancellationPolicy`, `PartialRefundPolicy`, `NoCancellationRefundPolicy`  
-**Pricing:** `BasePricingStrategy`, `DiscountedPricingStrategy`  
-**Participants:** `CancellationPolicy`, `PricingStrategy`, `SystemPolicy`, `AdminService`
-
-### 3. Observer — Notifications
-**Problem:** `BookingService` and `PaymentService` must trigger notifications without being coupled to notification logic.  
-**Solution:** Services publish `BookingEvent` objects to registered `BookingEventObserver` instances. `NotificationObserver` handles delivery via `NotificationService` (stores + prints to console).  
-**Participants:** `BookingEventObserver`, `BookingEvent`, `NotificationObserver`, `NotificationService`
-
-### 4. Template Method — Payment Processing Algorithm
-**Problem:** All payment processors share the same processing steps (validate → delay → generate ID → create record) but differ only in validation logic.  
-**Solution:** `PaymentProcessor.process()` is `final` and defines the algorithm skeleton. The `validate()` step is `abstract`, implemented differently by each subclass.  
-**Participants:** `PaymentProcessor` (abstract), `CreditCardProcessor`, `DebitCardProcessor`, `PayPalProcessor`, `BankTransferProcessor`
-
-### 5. Factory Method — Payment Processor Creation
-**Problem:** `PaymentService` should not be coupled to every concrete processor type.  
-**Solution:** `PaymentProcessorFactory.create(PaymentType)` returns the correct processor. `delayMs` is injectable so tests pass `0` to skip the simulated delay.  
-**Participants:** `PaymentProcessorFactory`, `PaymentProcessor` subclasses
-
----
-
-## UML Diagrams
-
-Sources in `diagrams/puml/`, pre-rendered PDFs in `diagrams/pdf/`.
-
-**To re-render:**
-- **Online:** Paste `.puml` content at [plantuml.com/plantuml](https://www.plantuml.com/plantuml)
-- **VS Code:** PlantUML extension → open `.puml` → `Option+D` (Mac) / `Alt+D` (Win/Linux)
-- **JAR:** `java -jar plantuml.jar diagrams/puml/use_case_diagram.puml`
-
----
-
-## Running Locally (Maven)
-
-**Prerequisites:** Java 17+, Maven 3.8+
-
-```bash
-cd backend
-mvn package -DskipTests
-java -jar target/service-booking-platform-1.0.0.jar
-```
-
----
-
-## Running with Docker
-
-**Prerequisites:** Docker Desktop
-
-```bash
-# Option A — Compose (recommended)
-docker compose up --build
-
-# Option B — Direct
-docker build -t booking-platform .
-docker run -it --rm booking-platform
-```
-
-> `-it` is required — without it stdin is closed and the CLI won't accept input.
-
----
-
-## Running Tests
-
-```bash
-cd backend
-mvn test
-```
-
-| Test File | Covers |
-|---|---|
-| `BookingStateTransitionTest` | Valid and invalid state transitions |
-| `CancellationPolicyTest` | All three cancellation policy behaviours |
-| `ConsultantAdminTest` | Consultant approval/rejection, admin policy config |
-| `PaymentValidationTest` | Validation rules for all four payment methods |
-| `PaymentFlowTest` | End-to-end: validation → delay → transaction ID → booking Paid |
-
----
-
-## CLI Demo (Recommended Order for Grading)
-
-**1. Admin (UC11, UC12)**
-- Approve a consultant registration
-- Set cancellation policy (free / partial / none)
-- Set pricing strategy (base / discounted)
-- Toggle notifications on/off
-
-**2. Consultant (UC8, UC9, UC10)**
-- Add available time slots
-- View and accept/reject incoming booking requests
-- Mark a booking as completed (after payment)
-
-**3. Client (UC1–UC7)**
-- Browse services
-- Request a booking (approved consultant + available slot)
-- Add a payment method and process payment
-- View booking history and payment history
-- Cancel a booking (observe refund behaviour per active policy)
-- View notifications
-
----
-
-## Team Contributions
-
-| Contributor | Contributions |
-|---|---|
-| Mehdi Jafarian | Project setup, PlantUML diagrams, booking state machine, in-memory repositories, payment processors, CLI menus, unit tests, Docker |
-| Naeesha Puri | Observer pattern, `AdminService`, `ClientService`, `ConsultantService`, `ServiceCatalogService`, exception hierarchy, payment domain models |
-| Spence Hashemi | Core domain entities, repository interfaces, `TimeProvider` abstraction, `pom.xml`, Docker files |
-
-> Full commit history available in the GitHub repository above.
-
----
-
-## Notes & Assumptions
-
-- Persistence is simulated with in-memory repositories (no database).
-- Notifications are stored in-memory and printed to console (no email or external services).
-- Payment processing delay is 2.5 seconds in production; injectable as `0` for tests.
-- Bank transfer format: account number 8–17 digits, routing number exactly 9 digits.
+### Minimal Modification
+- `Booking.java` — Added `@JsonIgnore` on `stateHandler` field (serialization annotation only, no logic change)
