@@ -83,7 +83,7 @@ Create a `.env` file from `.env.example`:
 |------|---------|
 | 3000 | Frontend (Nginx serving React SPA, proxies `/api/*` to backend) |
 | 8080 | Backend (Spring Boot REST API) |
-| 5432 | PostgreSQL (mapped for debugging; not needed externally) |
+| 5433 | PostgreSQL (mapped for debugging; not needed externally) |
 
 ## API Endpoints
 
