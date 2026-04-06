@@ -37,7 +37,7 @@
     <!-- Spring Boot Data JPA (for later DB migration) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <artifactId>spring-boot-starter-data-jdbc</artifactId>
     </dependency>
 
     <!-- PostgreSQL driver (for later DB migration) -->
